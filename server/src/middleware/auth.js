@@ -1,6 +1,18 @@
+import { verifyAccessToken } from '../utils/tokens.js';
+
 export function auth(req, res, next) {
-  return res.status(501).json({
-    success: false,
-    error: 'Auth middleware not implemented yet',
-  });
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const payload = verifyAccessToken(token);
+    req.user = payload;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ success: false, error: 'Invalid token' });
+  }
 }

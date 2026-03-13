@@ -1,6 +1,6 @@
 export function adminOnly(req, res, next) {
-  return res.status(501).json({
-    success: false,
-    error: 'Admin middleware not implemented yet',
-  });
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Forbidden' });
+  }
+  return next();
 }
