@@ -1,0 +1,16 @@
+INSERT INTO categories (id, name, slug) VALUES
+  (1, 'Dark Chocolate', 'dark-chocolate'),
+  (2, 'Milk Chocolate', 'milk-chocolate'),
+  (3, 'White Chocolate', 'white-chocolate'),
+  (4, 'Ruby Chocolate', 'ruby-chocolate'),
+  (5, 'Filled & Pralines', 'filled-pralines'),
+  (6, 'Drinking Chocolate', 'drinking-chocolate'),
+  (7, 'Vegan & Dairy-Free', 'vegan-dairy-free'),
+  (8, 'Sugar-Free', 'sugar-free'),
+  (9, 'Single Origin', 'single-origin'),
+  (10, 'Seasonal & Limited Edition', 'seasonal-limited-edition'),
+  (11, 'Gift Boxes', 'gift-boxes'),
+  (12, 'Spreads & Creams', 'spreads-creams'),
+  (13, 'Raw & Organic', 'raw-organic'),
+  (14, 'Chocolate-Covered Nuts', 'chocolate-covered-nuts'),
+  (15, 'Chocolate Bars', 'chocolate-bars');
