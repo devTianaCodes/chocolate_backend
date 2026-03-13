@@ -1,7 +1,29 @@
+import { pool } from '../config/db.js';
+
 export async function listCategories() {
-  throw new Error('Not implemented');
+  const [rows] = await pool.query(
+    'SELECT id, name, slug FROM categories ORDER BY name ASC'
+  );
+  return rows;
 }
 
 export async function getProductsByCategorySlug(slug) {
-  throw new Error('Not implemented');
+  const [categoryRows] = await pool.query(
+    'SELECT id, name, slug FROM categories WHERE slug = ? LIMIT 1',
+    [slug]
+  );
+
+  const category = categoryRows[0];
+  if (!category) return null;
+
+  const [products] = await pool.query(
+    `SELECT p.id, p.slug, p.name, p.description, p.price, p.discount_price, p.image,
+            p.origin, p.cocoa_percentage, p.weight_grams, p.is_active, p.created_at
+     FROM products p
+     WHERE p.category_id = ? AND p.is_active = 1
+     ORDER BY p.created_at DESC`,
+    [category.id]
+  );
+
+  return { category, products };
 }

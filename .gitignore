@@ -5,7 +5,11 @@ node_modules/
 server/dist/
 
 # Local env
+.env
 server/.env
+
+# OS
+.DS_Store
 
 # Local docs (do not commit)
 docs/ChocolateCraftHouse.md

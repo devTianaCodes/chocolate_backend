@@ -1,7 +1,11 @@
-import app from './src/app.js';
 import { loadEnv } from './src/config/env.js';
 
 loadEnv();
+
+const { default: app } = await import('./src/app.js');
+const { testConnection } = await import('./src/config/db.js');
+
+await testConnection();
 
 const port = process.env.PORT || 3001;
 
