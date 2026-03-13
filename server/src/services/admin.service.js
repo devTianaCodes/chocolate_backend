@@ -1,23 +1,110 @@
-export async function listAdminProducts(payload) {
-  throw new Error('Not implemented');
+import { pool } from '../config/db.js';
+
+export async function listAdminProducts() {
+  const [rows] = await pool.query(
+    `SELECT p.id, p.slug, p.name, p.price, p.discount_price, p.image, p.is_active,
+            p.created_at, c.name AS category_name
+     FROM products p
+     JOIN categories c ON c.id = p.category_id
+     ORDER BY p.created_at DESC`
+  );
+  return rows;
 }
 
 export async function createAdminProduct(payload) {
-  throw new Error('Not implemented');
+  const {
+    category_id,
+    slug,
+    name,
+    description,
+    price,
+    discount_price,
+    image,
+    origin,
+    cocoa_percentage,
+    weight_grams,
+    is_active = 1,
+  } = payload;
+
+  const [result] = await pool.query(
+    `INSERT INTO products (category_id, slug, name, description, price, discount_price, image,
+                           origin, cocoa_percentage, weight_grams, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      category_id,
+      slug,
+      name,
+      description,
+      price,
+      discount_price,
+      image,
+      origin || null,
+      cocoa_percentage || null,
+      weight_grams || null,
+      is_active ? 1 : 0,
+    ]
+  );
+
+  return { id: result.insertId };
 }
 
-export async function updateAdminProduct(payload) {
-  throw new Error('Not implemented');
+export async function updateAdminProduct({ id, payload }) {
+  const fields = [
+    'category_id',
+    'slug',
+    'name',
+    'description',
+    'price',
+    'discount_price',
+    'image',
+    'origin',
+    'cocoa_percentage',
+    'weight_grams',
+    'is_active',
+  ];
+
+  const updates = [];
+  const values = [];
+
+  for (const key of fields) {
+    if (payload[key] !== undefined) {
+      updates.push(`${key} = ?`);
+      values.push(payload[key]);
+    }
+  }
+
+  if (updates.length === 0) {
+    const err = new Error('No fields to update');
+    err.status = 400;
+    throw err;
+  }
+
+  values.push(id);
+  await pool.query(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, values);
+  return { id };
 }
 
-export async function updateAdminInventory(payload) {
-  throw new Error('Not implemented');
+export async function updateAdminInventory({ productId, quantity }) {
+  const [rows] = await pool.query('SELECT product_id FROM inventory WHERE product_id = ?', [productId]);
+  if (rows.length === 0) {
+    await pool.query('INSERT INTO inventory (product_id, quantity) VALUES (?, ?)', [productId, quantity]);
+  } else {
+    await pool.query('UPDATE inventory SET quantity = ? WHERE product_id = ?', [quantity, productId]);
+  }
+  return { productId, quantity };
 }
 
-export async function listAdminOrders(payload) {
-  throw new Error('Not implemented');
+export async function listAdminOrders() {
+  const [rows] = await pool.query(
+    `SELECT o.id, o.order_number, o.status, o.total, o.created_at, u.email
+     FROM orders o
+     JOIN users u ON u.id = o.user_id
+     ORDER BY o.created_at DESC`
+  );
+  return rows;
 }
 
-export async function updateAdminOrderStatus(payload) {
-  throw new Error('Not implemented');
+export async function updateAdminOrderStatus({ id, status }) {
+  await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+  return { id, status };
 }

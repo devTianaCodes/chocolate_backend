@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import * as adminController from '../controllers/admin.controller.js';
+import { auth } from '../middleware/auth.js';
+import { adminOnly } from '../middleware/adminOnly.js';
 
 const router = Router();
+
+router.use(auth, adminOnly);
 
 router.get('/products', adminController.listProducts);
 router.post('/products', adminController.createProduct);
