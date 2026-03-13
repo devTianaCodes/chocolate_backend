@@ -1,0 +1,2 @@
+-- ChocolateCraftHouse schema placeholder
+-- TODO: Define full schema per docs (users, products, orders, etc.)

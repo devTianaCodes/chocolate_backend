@@ -4,6 +4,9 @@ node_modules/
 # Build
 server/dist/
 
+# Local env
+server/.env
+
 # Local docs (do not commit)
 docs/ChocolateCraftHouse.md
 docs/ChocolateCraftHouse-UI-Guidelines.md
