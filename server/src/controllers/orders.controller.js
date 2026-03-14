@@ -2,7 +2,8 @@ import * as ordersService from '../services/orders.service.js';
 
 export async function createOrder(req, res, next) {
   try {
-    const { userId, sessionId, shippingAddress, shippingMethodId } = req.body;
+    const userId = Number(req.user.id);
+    const { sessionId, shippingAddress, shippingMethodId } = req.body;
     const data = await ordersService.createOrder({ userId, sessionId, shippingAddress, shippingMethodId });
     res.json({ success: true, data });
   } catch (err) {
@@ -12,7 +13,7 @@ export async function createOrder(req, res, next) {
 
 export async function listOrders(req, res, next) {
   try {
-    const userId = Number(req.query.userId);
+    const userId = Number(req.user.id);
     const data = await ordersService.listOrders({ userId });
     res.json({ success: true, data });
   } catch (err) {
@@ -22,7 +23,7 @@ export async function listOrders(req, res, next) {
 
 export async function getOrder(req, res, next) {
   try {
-    const userId = Number(req.query.userId);
+    const userId = Number(req.user.id);
     const id = Number(req.params.id);
     const data = await ordersService.getOrder({ id, userId });
     if (!data) {

@@ -6,7 +6,7 @@ const stripe = isMockStripe ? null : new Stripe(process.env.STRIPE_SECRET_KEY);
 
 async function getOrderById(orderId) {
   const [rows] = await pool.query(
-    'SELECT id, order_number, total, status FROM orders WHERE id = ? LIMIT 1',
+    'SELECT id, user_id, order_number, total, status FROM orders WHERE id = ? LIMIT 1',
     [orderId]
   );
   return rows[0] || null;
@@ -43,7 +43,7 @@ async function markOrderPaid(orderId) {
   );
 }
 
-export async function createStripeIntent({ orderId }) {
+export async function createStripeIntent({ orderId, userId }) {
   if (!orderId) {
     const err = new Error('orderId is required');
     err.status = 400;
@@ -52,6 +52,12 @@ export async function createStripeIntent({ orderId }) {
 
   const order = await getOrderById(orderId);
   if (!order) {
+    const err = new Error('Order not found');
+    err.status = 404;
+    throw err;
+  }
+
+  if (Number(order.user_id) !== Number(userId)) {
     const err = new Error('Order not found');
     err.status = 404;
     throw err;

@@ -38,6 +38,34 @@ async function getCartItems(cartId) {
   return rows;
 }
 
+async function getCartByItemOwnership({ itemId, userId, sessionId }) {
+  const [rows] = await pool.query(
+    `SELECT c.id, c.user_id, c.session_id
+     FROM cart_items ci
+     JOIN carts c ON c.id = ci.cart_id
+     WHERE ci.id = ?
+     LIMIT 1`,
+    [itemId]
+  );
+
+  const cart = rows[0] || null;
+  if (!cart) {
+    return null;
+  }
+
+  if (userId && Number(cart.user_id) === Number(userId)) {
+    return cart;
+  }
+
+  if (!userId && sessionId && cart.session_id === sessionId) {
+    return cart;
+  }
+
+  const err = new Error('Cart item not found');
+  err.status = 404;
+  throw err;
+}
+
 export async function getCart({ userId, sessionId }) {
   const cart = await findCart({ userId, sessionId });
   if (!cart) {
@@ -72,7 +100,12 @@ export async function addCartItem({ userId, sessionId, productId, quantity = 1 }
   return { id: cart.id, items };
 }
 
-export async function updateCartItem({ itemId, quantity }) {
+export async function updateCartItem({ itemId, quantity, userId, sessionId }) {
+  const cart = await getCartByItemOwnership({ itemId, userId, sessionId });
+  if (!cart) {
+    return { id: null, items: [] };
+  }
+
   const qty = Number(quantity || 0);
   if (qty <= 0) {
     await pool.query('DELETE FROM cart_items WHERE id = ?', [itemId]);
@@ -80,26 +113,19 @@ export async function updateCartItem({ itemId, quantity }) {
     await pool.query('UPDATE cart_items SET quantity = ? WHERE id = ?', [qty, itemId]);
   }
 
-  const [rows] = await pool.query(
-    'SELECT cart_id FROM cart_items WHERE id = ? LIMIT 1',
-    [itemId]
-  );
-  if (rows.length === 0) {
-    return { id: null, items: [] };
-  }
-  const items = await getCartItems(rows[0].cart_id);
-  return { id: rows[0].cart_id, items };
+  const items = await getCartItems(cart.id);
+  return { id: cart.id, items };
 }
 
-export async function removeCartItem({ itemId }) {
-  const [rows] = await pool.query(
-    'SELECT cart_id FROM cart_items WHERE id = ? LIMIT 1',
-    [itemId]
-  );
+export async function removeCartItem({ itemId, userId, sessionId }) {
+  const cart = await getCartByItemOwnership({ itemId, userId, sessionId });
+  if (!cart) {
+    return { id: null, items: [] };
+  }
+
   await pool.query('DELETE FROM cart_items WHERE id = ?', [itemId]);
-  if (rows.length === 0) return { id: null, items: [] };
-  const items = await getCartItems(rows[0].cart_id);
-  return { id: rows[0].cart_id, items };
+  const items = await getCartItems(cart.id);
+  return { id: cart.id, items };
 }
 
 export async function mergeCart({ userId, sessionId }) {

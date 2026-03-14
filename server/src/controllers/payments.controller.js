@@ -3,7 +3,8 @@ import * as paymentsService from '../services/payments.service.js';
 export async function createStripeIntent(req, res, next) {
   try {
     const { orderId } = req.body;
-    const data = await paymentsService.createStripeIntent({ orderId });
+    const userId = Number(req.user.id);
+    const data = await paymentsService.createStripeIntent({ orderId, userId });
     res.json({ success: true, data });
   } catch (err) {
     next(err);
