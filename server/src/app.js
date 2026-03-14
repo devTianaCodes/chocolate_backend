@@ -19,6 +19,7 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static('public'));
