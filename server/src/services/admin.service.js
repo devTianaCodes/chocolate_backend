@@ -2,8 +2,9 @@ import { pool } from '../config/db.js';
 
 export async function listAdminProducts() {
   const [rows] = await pool.query(
-    `SELECT p.id, p.slug, p.name, p.price, p.discount_price, p.image, p.is_active,
-            p.created_at, c.name AS category_name, COALESCE(i.quantity, 0) AS inventory_quantity
+    `SELECT p.id, p.category_id, p.slug, p.name, p.description, p.price, p.discount_price,
+            p.image, p.is_active, p.created_at, c.name AS category_name,
+            COALESCE(i.quantity, 0) AS inventory_quantity
      FROM products p
      JOIN categories c ON c.id = p.category_id
      LEFT JOIN inventory i ON i.product_id = p.id
