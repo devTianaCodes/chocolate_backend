@@ -5,37 +5,94 @@ import { hashToken } from '../utils/refreshToken.js';
 
 const REFRESH_COOKIE = 'refresh_token';
 
-export async function registerUser({ email, password }) {
-  const [existing] = await pool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-  if (existing.length > 0) {
-    const err = new Error('Email already registered');
-    err.status = 400;
-    throw err;
-  }
+function buildUser(row) {
+  return {
+    id: row.id,
+    email: row.email,
+    firstName: row.first_name || '',
+    lastName: row.last_name || '',
+    role: row.role,
+  };
+}
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const [result] = await pool.query(
-    'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
-    [email, passwordHash, 'customer']
-  );
+function createRecipientName(firstName, lastName) {
+  return [firstName, lastName].filter(Boolean).join(' ');
+}
 
-  const user = { id: result.insertId, email, role: 'customer' };
-  const accessToken = signAccessToken(user);
-  const refreshToken = signRefreshToken({ id: user.id });
-
+async function insertRefreshToken(executor, userId, refreshToken) {
   const refreshHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await pool.query(
+  await executor.query(
     'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
-    [user.id, refreshHash, expiresAt]
+    [userId, refreshHash, expiresAt]
   );
+}
 
-  return { user, accessToken, refreshToken };
+export async function registerUser({ firstName, lastName, email, password, phone, shippingAddress }) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [existing] = await connection.query(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+
+    if (existing.length > 0) {
+      const err = new Error('Email already registered');
+      err.status = 400;
+      throw err;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const [result] = await connection.query(
+      'INSERT INTO users (first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+      [firstName, lastName, email, passwordHash, 'customer']
+    );
+
+    await connection.query(
+      `INSERT INTO addresses (user_id, label, recipient_name, line1, line2, city, state, postal_code, country, phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        result.insertId,
+        'Default',
+        createRecipientName(firstName, lastName),
+        shippingAddress.line1,
+        shippingAddress.line2 || null,
+        shippingAddress.city,
+        shippingAddress.state,
+        shippingAddress.postalCode,
+        shippingAddress.country,
+        phone || null,
+      ]
+    );
+
+    const user = {
+      id: result.insertId,
+      email,
+      firstName,
+      lastName,
+      role: 'customer',
+    };
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken({ id: user.id });
+
+    await insertRefreshToken(connection, user.id, refreshToken);
+    await connection.commit();
+
+    return { user, accessToken, refreshToken };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function loginUser({ email, password }) {
   const [rows] = await pool.query(
-    'SELECT id, email, password_hash, role FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, email, first_name, last_name, password_hash, role FROM users WHERE email = ? LIMIT 1',
     [email]
   );
 
@@ -53,16 +110,11 @@ export async function loginUser({ email, password }) {
     throw err;
   }
 
-  const user = { id: userRow.id, email: userRow.email, role: userRow.role };
+  const user = buildUser(userRow);
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken({ id: user.id });
 
-  const refreshHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await pool.query(
-    'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
-    [user.id, refreshHash, expiresAt]
-  );
+  await insertRefreshToken(pool, user.id, refreshToken);
 
   return { user, accessToken, refreshToken };
 }
@@ -95,23 +147,17 @@ export async function refreshAccessToken({ refreshToken }) {
     throw err;
   }
 
-  // Rotate refresh token
   await pool.query('DELETE FROM refresh_tokens WHERE id = ?', [rows[0].id]);
 
   const [userRows] = await pool.query(
-    'SELECT id, email, role FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, email, first_name, last_name, role FROM users WHERE id = ? LIMIT 1',
     [payload.id]
   );
 
-  const user = userRows[0];
-  const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role });
+  const user = buildUser(userRows[0]);
+  const accessToken = signAccessToken(user);
   const newRefreshToken = signRefreshToken({ id: user.id });
-  const newRefreshHash = hashToken(newRefreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await pool.query(
-    'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
-    [user.id, newRefreshHash, expiresAt]
-  );
+  await insertRefreshToken(pool, user.id, newRefreshToken);
 
   return { user, accessToken, refreshToken: newRefreshToken };
 }
