@@ -23,9 +23,27 @@ Style rules for every product:
   - `single-harvest-ruby-chocolate-main.png`
   - `single-harvest-ruby-chocolate-detail.png`
 - Wide:
-  - Luxurious ruby chocolate bar in eco-friendly kraft paper packaging on a light cream-peach background. The bar is angled elegantly with red currants, pomegranate seeds, and soft pink petals arranged around it. Hyperrealistic commercial product photography, natural side lighting, refined premium composition.
+  - An elegant ruby chocolate bar packaging displayed on creamy kraft paper against a light cream-peach background (#F5E6D3). The bar is positioned diagonally, showing its refined packaging and the rosy ruby chocolate surface. Fresh red currants, pomegranate seeds, and freeze-dried berry pieces are scattered artfully around, some with glossy jewel-like highlights. Delicate pink and crimson edible flowers such as rose petals, peony petals, and hibiscus create a romantic border. Ruby cocoa dust and subtle berry crumbs accent the composition. Warm, soft natural lighting with gentle shadows. Hyperrealistic product photography, professional styling, 400x500px composition. Sharp focus on chocolate, elegant and sophisticated aesthetic.
 - Detail:
-  - Macro close-up of ruby chocolate with glossy pink surface, tart berry inclusions, and scattered red fruit crumbs on crumpled kraft paper. Cream-peach bokeh background, warm diffused light, premium commercial detail shot.
+  - Extreme macro close-up of ruby chocolate bar surface with texture details, positioned on textured kraft paper. Freeze-dried berry pieces, red currants, and pomegranate seed fragments are placed directly on and beside the chocolate, highlighting the glossy pink ruby surface. Scattered berry seeds, ruby cocoa dust, and delicate pink edible petals frame the shot. Soft rose and cream tones dominate. Hyperrealistic detail photography with macro lens, warm diffused lighting, professional commercial styling. Light cream-peach background with soft focus. 400x500px intense detail composition.
+- SQL:
+  ```sql
+  START TRANSACTION;
+
+  UPDATE products
+  SET image = '/product-images/single-harvest-ruby-chocolate-main.png'
+  WHERE id = 4;
+
+  DELETE FROM product_images
+  WHERE product_id = 4;
+
+  INSERT INTO product_images (product_id, url, alt_text, is_primary)
+  VALUES
+    (4, '/product-images/single-harvest-ruby-chocolate-main.png', 'Single-Harvest Ruby Chocolate', 1),
+    (4, '/product-images/single-harvest-ruby-chocolate-detail.png', 'Single-Harvest Ruby Chocolate', 0);
+
+  COMMIT;
+  ```
 
 ## Product 5: Stone-Ground Filled & Pralines
 - Files:

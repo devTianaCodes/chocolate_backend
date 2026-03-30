@@ -50,5 +50,38 @@ export async function getProductBySlug(slug) {
     [slug]
   );
 
-  return rows[0] || null;
+  const product = rows[0] || null;
+  if (!product) return null;
+
+  const [imageRows] = await pool.query(
+    `SELECT url, alt_text, is_primary
+     FROM product_images
+     WHERE product_id = ?
+     ORDER BY is_primary DESC, id ASC`,
+    [product.id]
+  );
+
+  const images = [];
+  const seen = new Set();
+
+  const pushImage = (url, altText, isPrimary) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    images.push({
+      url,
+      alt_text: altText || product.name,
+      is_primary: Boolean(isPrimary),
+    });
+  };
+
+  pushImage(product.image, product.name, true);
+  imageRows.forEach((image) => {
+    pushImage(image.url, image.alt_text, image.is_primary);
+  });
+
+  return {
+    ...product,
+    hover_image: images.find((image) => !image.is_primary)?.url || null,
+    images,
+  };
 }
