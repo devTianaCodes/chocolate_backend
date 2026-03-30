@@ -7,6 +7,13 @@ export async function listProducts({ page = 1, limit = 12 } = {}) {
 
   const [rows] = await pool.query(
     `SELECT p.id, p.slug, p.name, p.description, p.price, p.discount_price, p.image,
+            (
+              SELECT pi.url
+              FROM product_images pi
+              WHERE pi.product_id = p.id AND pi.is_primary = 0
+              ORDER BY pi.id ASC
+              LIMIT 1
+            ) AS hover_image,
             p.origin, p.cocoa_percentage, p.weight_grams, p.is_active, p.created_at,
             c.name AS category_name, c.slug AS category_slug
      FROM products p
