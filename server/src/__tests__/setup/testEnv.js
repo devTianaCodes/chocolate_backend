@@ -1,0 +1,16 @@
+process.env.NODE_ENV = 'test';
+process.env.PORT = process.env.PORT || '3001';
+process.env.CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+process.env.DB_PORT = process.env.DB_PORT || '3306';
+process.env.DB_USER = process.env.DB_USER || 'root';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'password';
+process.env.DB_NAME = process.env.DB_NAME || 'chocolate_test';
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret';
+process.env.JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '15m';
+process.env.JWT_REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '7d';
+process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test';
+process.env.SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || 'sendgrid-test-key';
+process.env.EMAIL_FROM = process.env.EMAIL_FROM || 'test@example.com';
