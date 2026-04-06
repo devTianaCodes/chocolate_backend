@@ -12,8 +12,10 @@ async function loadPaymentsService({ stripeSecretKey = 'sk_test_placeholder', we
   });
 
   const sendOrderConfirmationEmail = vi.fn();
+  const sendAdminOrderNotificationEmail = vi.fn();
   vi.doMock('../../services/mail.service.js', () => ({
     sendOrderConfirmationEmail,
+    sendAdminOrderNotificationEmail,
   }));
 
   const stripeConstructEvent = vi.fn();
@@ -35,13 +37,22 @@ async function loadPaymentsService({ stripeSecretKey = 'sk_test_placeholder', we
   const helpers = await import('../setup/mockDb.js');
   const service = await import('../../services/payments.service.js');
 
-  return { service, ...helpers, stripeConstructEvent, stripeCreateIntent, sendOrderConfirmationEmail };
+  return {
+    service,
+    ...helpers,
+    stripeConstructEvent,
+    stripeCreateIntent,
+    sendOrderConfirmationEmail,
+    sendAdminOrderNotificationEmail,
+  };
 }
 
 describe('payments.service', () => {
   beforeEach(async () => {
     const { resetMockDb } = await import('../setup/mockDb.js');
     resetMockDb();
+    delete process.env.ADMIN_ORDER_EMAIL;
+    delete process.env.STORE_ORDER_EMAIL;
   });
 
   it('creates a mock Stripe intent when Stripe is disabled', async () => {
@@ -107,6 +118,38 @@ describe('payments.service', () => {
         to: 'ada@example.com',
         order: expect.objectContaining({ order_number: 'CH-4' }),
         items: [expect.objectContaining({ name: 'Dark Bar' })],
+      })
+    );
+  });
+
+  it('sends an admin/store notification email when configured', async () => {
+    process.env.ADMIN_ORDER_EMAIL = 'store@chocolatecrafthouse.com';
+
+    const {
+      service,
+      queuePoolQueries,
+      sendAdminOrderNotificationEmail,
+      sendOrderConfirmationEmail,
+    } = await loadPaymentsService();
+
+    queuePoolQueries(
+      [[{ id: 5, user_id: 3, order_number: 'CH-5', total: '22.00', status: 'pending', created_at: '2025-01-02 12:00:00', email: 'ada@example.com', first_name: 'Ada', last_name: 'Lovelace' }]],
+      [[]],
+      [{ insertId: 40 }],
+      [{}],
+      [[{ name: 'Praline Box', price: '11.00', quantity: 2, image: '/box.png' }]]
+    );
+
+    await service.handleStripeWebhook({
+      mockPayload: { orderId: 5, paymentIntentId: 'pi_mock_5' },
+    });
+
+    expect(sendOrderConfirmationEmail).toHaveBeenCalled();
+    expect(sendAdminOrderNotificationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'store@chocolatecrafthouse.com',
+        order: expect.objectContaining({ order_number: 'CH-5' }),
+        items: [expect.objectContaining({ name: 'Praline Box' })],
       })
     );
   });

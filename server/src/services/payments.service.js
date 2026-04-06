@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { pool } from '../config/db.js';
-import { sendOrderConfirmationEmail } from './mail.service.js';
+import { sendAdminOrderNotificationEmail, sendOrderConfirmationEmail } from './mail.service.js';
 
 const isMockStripe = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder');
 const stripe = isMockStripe ? null : new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -73,6 +73,23 @@ async function maybeSendOrderConfirmationEmail(order) {
     }
   } catch (err) {
     console.error('Order confirmation email failed', err.message);
+  }
+
+  const adminRecipient = process.env.ADMIN_ORDER_EMAIL || process.env.STORE_ORDER_EMAIL;
+  if (!adminRecipient) return;
+
+  try {
+    const result = await sendAdminOrderNotificationEmail({
+      to: adminRecipient,
+      order,
+      items,
+    });
+
+    if (!result?.sent) {
+      console.warn(`Admin order email skipped for order ${order.order_number}: ${result?.reason || 'unknown-reason'}`);
+    }
+  } catch (err) {
+    console.error('Admin order email failed', err.message);
   }
 }
 

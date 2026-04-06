@@ -151,24 +151,117 @@ function buildOrderEmailText({ customerName, order, items }) {
   ].join('\n');
 }
 
-export async function sendOrderConfirmationEmail({ to, order, items }) {
+async function sendMail({ to, subject, text, html, includeLogo = true, orderNumber }) {
   const mailer = getTransporter();
   if (!mailer || !to) {
     return { sent: false, reason: 'mail-disabled' };
   }
 
-  const customerName = [order.first_name, order.last_name].filter(Boolean).join(' ').trim();
-  const attachment = getLogoAttachment();
+  const attachment = includeLogo ? getLogoAttachment() : null;
 
   await mailer.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
-    subject: `Your Chocolate Craft House order ${order.order_number} is confirmed`,
-    text: buildOrderEmailText({ customerName, order, items }),
-    html: buildOrderEmailHtml({ customerName, order, items }),
+    subject,
+    text,
+    html,
     attachments: attachment ? [attachment] : [],
   });
 
-  console.log(`Order confirmation email sent to ${to} for order ${order.order_number}`);
+  console.log(`Email sent to ${to}${orderNumber ? ` for order ${orderNumber}` : ''}`);
   return { sent: true };
+}
+
+export async function sendOrderConfirmationEmail({ to, order, items }) {
+  const customerName = [order.first_name, order.last_name].filter(Boolean).join(' ').trim();
+
+  return sendMail({
+    to,
+    subject: `Your Chocolate Craft House order ${order.order_number} is confirmed`,
+    text: buildOrderEmailText({ customerName, order, items }),
+    html: buildOrderEmailHtml({ customerName, order, items }),
+    includeLogo: true,
+    orderNumber: order.order_number,
+  });
+}
+
+function buildAdminOrderEmailHtml({ order, items }) {
+  const rows = items
+    .map((item) => {
+      const quantity = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      return `
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid rgba(79,33,33,0.10);color:#4f2121;font-size:14px;">${escapeHtml(item.name)}</td>
+          <td style="padding:12px 0;border-bottom:1px solid rgba(79,33,33,0.10);color:#7a5d57;font-size:14px;text-align:center;">${quantity}</td>
+          <td style="padding:12px 0;border-bottom:1px solid rgba(79,33,33,0.10);color:#4f2121;font-size:14px;text-align:right;">${escapeHtml(formatCurrency(price * quantity))}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  return `
+    <div style="margin:0;padding:32px 20px;background:#f8dfd4;font-family:Georgia, 'Times New Roman', serif;">
+      <div style="max-width:680px;margin:0 auto;background:#f3dbcf;border:1px solid rgba(79,33,33,0.12);box-shadow:0 18px 36px rgba(39,19,13,0.12);">
+        <div style="padding:20px 28px;background:#4f2121;color:#fff4ec;">
+          <p style="margin:0;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;">New paid order</p>
+        </div>
+        <div style="padding:28px;">
+          <h1 style="margin:0 0 16px;color:#4f2121;font-size:30px;line-height:1.1;">A new order has been paid.</h1>
+          <p style="margin:0 0 24px;color:#5a3a34;font-size:16px;line-height:1.7;">
+            A customer order has been confirmed and is ready for fulfilment.
+          </p>
+          <div style="margin:0 0 24px;padding:20px;background:#f7ebe6;border:1px solid rgba(79,33,33,0.12);color:#5a3a34;font-size:14px;line-height:1.7;">
+            <p style="margin:0 0 6px;"><strong>Order number:</strong> ${escapeHtml(order.order_number)}</p>
+            <p style="margin:0 0 6px;"><strong>Customer:</strong> ${escapeHtml([order.first_name, order.last_name].filter(Boolean).join(' ') || 'Customer')}</p>
+            <p style="margin:0 0 6px;"><strong>Email:</strong> ${escapeHtml(order.email || '')}</p>
+            <p style="margin:0 0 6px;"><strong>Total:</strong> ${escapeHtml(formatCurrency(order.total))}</p>
+            <p style="margin:0;"><strong>Placed on:</strong> ${escapeHtml(new Date(order.created_at).toLocaleDateString())}</p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="padding:0 0 10px;border-bottom:1px solid rgba(79,33,33,0.18);color:#7a5d57;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;text-align:left;">Item</th>
+                <th style="padding:0 0 10px;border-bottom:1px solid rgba(79,33,33,0.18);color:#7a5d57;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;text-align:center;">Qty</th>
+                <th style="padding:0 0 10px;border-bottom:1px solid rgba(79,33,33,0.18);color:#7a5d57;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;text-align:right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildAdminOrderEmailText({ order, items }) {
+  const lines = items.map((item) => {
+    const quantity = Number(item.quantity || 0);
+    const price = Number(item.price || 0);
+    return `- ${item.name} x${quantity}: ${formatCurrency(price * quantity)}`;
+  });
+
+  return [
+    'A new order has been paid.',
+    '',
+    `Order number: ${order.order_number}`,
+    `Customer: ${[order.first_name, order.last_name].filter(Boolean).join(' ') || 'Customer'}`,
+    `Email: ${order.email || ''}`,
+    `Total: ${formatCurrency(order.total)}`,
+    `Placed on: ${new Date(order.created_at).toLocaleDateString()}`,
+    '',
+    'Items:',
+    ...lines,
+  ].join('\n');
+}
+
+export async function sendAdminOrderNotificationEmail({ to, order, items }) {
+  return sendMail({
+    to,
+    subject: `New paid order ${order.order_number}`,
+    text: buildAdminOrderEmailText({ order, items }),
+    html: buildAdminOrderEmailHtml({ order, items }),
+    includeLogo: false,
+    orderNumber: order.order_number,
+  });
 }
