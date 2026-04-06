@@ -9,7 +9,7 @@ vi.mock('../../utils/orderNumber.js', () => ({
   generateOrderNumber: vi.fn(() => 'CH-TEST-1'),
 }));
 
-const { mockConnection, queueConnectionQueries, resetMockDb } = await import('../setup/mockDb.js');
+const { mockConnection, mockPool, queueConnectionQueries, queuePoolQueries, resetMockDb } = await import('../setup/mockDb.js');
 const ordersService = await import('../../services/orders.service.js');
 
 describe('orders.service', () => {
@@ -80,5 +80,54 @@ describe('orders.service', () => {
     });
 
     expect(mockConnection.rollback).toHaveBeenCalled();
+  });
+
+  it('rejects createOrder when userId is missing', async () => {
+    await expect(
+      ordersService.createOrder({ userId: null, sessionId: null, shippingAddress: {}, shippingMethodId: null })
+    ).rejects.toMatchObject({ message: 'userId is required', status: 400 });
+  });
+
+  it('lists orders for a user', async () => {
+    queuePoolQueries([[{ id: 1, order_number: 'CH-1', status: 'paid', total: '12.00' }]]);
+
+    const result = await ordersService.listOrders({ userId: 7 });
+
+    expect(result).toEqual([{ id: 1, order_number: 'CH-1', status: 'paid', total: '12.00' }]);
+    expect(mockPool.query).toHaveBeenCalledWith(
+      'SELECT id, order_number, status, total, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC',
+      [7]
+    );
+  });
+
+  it('rejects listing orders without a user id', async () => {
+    await expect(ordersService.listOrders({ userId: null })).rejects.toMatchObject({
+      message: 'userId is required',
+      status: 400,
+    });
+  });
+
+  it('returns null when a specific order does not belong to the user', async () => {
+    queuePoolQueries([[]]);
+
+    const result = await ordersService.getOrder({ id: 22, userId: 7 });
+
+    expect(result).toBeNull();
+  });
+
+  it('returns an order with its items', async () => {
+    queuePoolQueries(
+      [[{ id: 22, order_number: 'CH-22', total: '18.00' }]],
+      [[{ product_id: 3, name: 'Dark Bar', quantity: 2, price: '9.00', image: '/bar.png' }]]
+    );
+
+    const result = await ordersService.getOrder({ id: 22, userId: 7 });
+
+    expect(result).toEqual({
+      id: 22,
+      order_number: 'CH-22',
+      total: '18.00',
+      items: [{ product_id: 3, name: 'Dark Bar', quantity: 2, price: '9.00', image: '/bar.png' }],
+    });
   });
 });

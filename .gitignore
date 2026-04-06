@@ -3,6 +3,7 @@ node_modules/
 
 # Build
 server/dist/
+server/coverage/
 
 # Local env
 .env

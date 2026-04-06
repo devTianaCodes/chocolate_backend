@@ -53,6 +53,7 @@ describe('payments.service', () => {
     resetMockDb();
     delete process.env.ADMIN_ORDER_EMAIL;
     delete process.env.STORE_ORDER_EMAIL;
+    delete process.env.ORDER_CONFIRMATION_RECIPIENT;
   });
 
   it('creates a mock Stripe intent when Stripe is disabled', async () => {

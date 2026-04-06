@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 process.env.NODE_ENV = 'test';
 process.env.PORT = process.env.PORT || '3001';
 process.env.CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -12,5 +14,7 @@ process.env.JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '15m';
 process.env.JWT_REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '7d';
 process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test';
-process.env.SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || 'sendgrid-test-key';
-process.env.EMAIL_FROM = process.env.EMAIL_FROM || 'test@example.com';
+process.env.SMTP_SERVICE = process.env.SMTP_SERVICE || 'gmail';
+process.env.SMTP_USER = process.env.SMTP_USER || 'test@example.com';
+process.env.SMTP_PASS = process.env.SMTP_PASS || 'app-password-placeholder';
+process.env.SMTP_FROM = process.env.SMTP_FROM || 'Chocolate Craft House <test@example.com>';
