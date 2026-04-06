@@ -1,15 +1,28 @@
 import Stripe from 'stripe';
 import { pool } from '../config/db.js';
+import { sendOrderConfirmationEmail } from './mail.service.js';
 
 const isMockStripe = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder');
 const stripe = isMockStripe ? null : new Stripe(process.env.STRIPE_SECRET_KEY);
 
 async function getOrderById(orderId) {
   const [rows] = await pool.query(
-    'SELECT id, user_id, order_number, total, status FROM orders WHERE id = ? LIMIT 1',
+    `SELECT o.id, o.user_id, o.order_number, o.total, o.status, o.created_at,
+            u.email, u.first_name, u.last_name
+     FROM orders o
+     JOIN users u ON u.id = o.user_id
+     WHERE o.id = ? LIMIT 1`,
     [orderId]
   );
   return rows[0] || null;
+}
+
+async function getOrderItems(orderId) {
+  const [rows] = await pool.query(
+    'SELECT name, price, quantity, image FROM order_items WHERE order_id = ? ORDER BY id ASC',
+    [orderId]
+  );
+  return rows;
 }
 
 async function upsertPayment({ orderId, providerPaymentId, amount, status }) {
@@ -41,6 +54,26 @@ async function markOrderPaid(orderId) {
     "UPDATE orders SET status = 'paid' WHERE id = ?",
     [orderId]
   );
+}
+
+async function maybeSendOrderConfirmationEmail(order) {
+  if (!order?.email || order.status === 'paid') return;
+
+  const items = await getOrderItems(order.id);
+
+  try {
+    const result = await sendOrderConfirmationEmail({
+      to: process.env.ORDER_CONFIRMATION_RECIPIENT || order.email,
+      order,
+      items,
+    });
+
+    if (!result?.sent) {
+      console.warn(`Order confirmation email skipped for order ${order.order_number}: ${result?.reason || 'unknown-reason'}`);
+    }
+  } catch (err) {
+    console.error('Order confirmation email failed', err.message);
+  }
 }
 
 export async function createStripeIntent({ orderId, userId }) {
@@ -136,6 +169,7 @@ export async function handleStripeWebhook({ rawBody, signature, mockPayload }) {
       status: 'succeeded',
     });
     await markOrderPaid(orderId);
+    await maybeSendOrderConfirmationEmail(order);
 
     return { received: true, mode: 'mock' };
   }
@@ -151,6 +185,11 @@ export async function handleStripeWebhook({ rawBody, signature, mockPayload }) {
     const orderId = Number(paymentIntent.metadata?.orderId);
 
     if (orderId) {
+      const order = await getOrderById(orderId);
+      if (!order) {
+        return { received: true, mode: 'stripe' };
+      }
+
       await upsertPayment({
         orderId,
         providerPaymentId: paymentIntent.id,
@@ -158,6 +197,7 @@ export async function handleStripeWebhook({ rawBody, signature, mockPayload }) {
         status: paymentIntent.status,
       });
       await markOrderPaid(orderId);
+      await maybeSendOrderConfirmationEmail(order);
     }
   }
 

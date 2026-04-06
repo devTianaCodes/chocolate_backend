@@ -11,6 +11,11 @@ async function loadPaymentsService({ stripeSecretKey = 'sk_test_placeholder', we
     return { pool: helpers.mockPool };
   });
 
+  const sendOrderConfirmationEmail = vi.fn();
+  vi.doMock('../../services/mail.service.js', () => ({
+    sendOrderConfirmationEmail,
+  }));
+
   const stripeConstructEvent = vi.fn();
   const stripeCreateIntent = vi.fn();
 
@@ -30,7 +35,7 @@ async function loadPaymentsService({ stripeSecretKey = 'sk_test_placeholder', we
   const helpers = await import('../setup/mockDb.js');
   const service = await import('../../services/payments.service.js');
 
-  return { service, ...helpers, stripeConstructEvent, stripeCreateIntent };
+  return { service, ...helpers, stripeConstructEvent, stripeCreateIntent, sendOrderConfirmationEmail };
 }
 
 describe('payments.service', () => {
@@ -82,12 +87,13 @@ describe('payments.service', () => {
   });
 
   it('handles mock webhooks and marks the order paid', async () => {
-    const { service, mockPool, queuePoolQueries } = await loadPaymentsService();
+    const { service, mockPool, queuePoolQueries, sendOrderConfirmationEmail } = await loadPaymentsService();
     queuePoolQueries(
-      [[{ id: 4, user_id: 3, order_number: 'CH-4', total: '19.00', status: 'pending' }]],
+      [[{ id: 4, user_id: 3, order_number: 'CH-4', total: '19.00', status: 'pending', created_at: '2025-01-01 12:00:00', email: 'ada@example.com', first_name: 'Ada', last_name: 'Lovelace' }]],
       [[]],
       [{ insertId: 33 }],
-      [{}]
+      [{}],
+      [[{ name: 'Dark Bar', price: '9.50', quantity: 2, image: '/bar.png' }]]
     );
 
     const result = await service.handleStripeWebhook({
@@ -95,6 +101,13 @@ describe('payments.service', () => {
     });
 
     expect(result).toEqual({ received: true, mode: 'mock' });
-    expect(mockPool.query).toHaveBeenLastCalledWith("UPDATE orders SET status = 'paid' WHERE id = ?", [4]);
+    expect(mockPool.query).toHaveBeenCalledWith("UPDATE orders SET status = 'paid' WHERE id = ?", [4]);
+    expect(sendOrderConfirmationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'ada@example.com',
+        order: expect.objectContaining({ order_number: 'CH-4' }),
+        items: [expect.objectContaining({ name: 'Dark Bar' })],
+      })
+    );
   });
 });
