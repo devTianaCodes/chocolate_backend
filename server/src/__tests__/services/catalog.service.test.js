@@ -72,6 +72,17 @@ describe('catalog services', () => {
     expect(result).toBeNull();
   });
 
+  it('lists categories ordered by name', async () => {
+    queuePoolQueries([[{ id: 3, name: 'Dark', slug: 'dark' }]]);
+
+    const result = await categoriesService.listCategories();
+
+    expect(result).toEqual([{ id: 3, name: 'Dark', slug: 'dark' }]);
+    expect(mockPool.query).toHaveBeenCalledWith(
+      'SELECT id, name, slug FROM categories ORDER BY name ASC'
+    );
+  });
+
   it('returns category products when the category exists', async () => {
     queuePoolQueries(
       [[{ id: 4, name: 'Gift Boxes', slug: 'gift-boxes' }]],

@@ -51,6 +51,27 @@ describe('catalog controllers', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('lists products and categories through their controllers', async () => {
+    listProducts.mockResolvedValue({ result: [{ id: 1, name: 'Dark Bar' }] });
+    listCategories.mockResolvedValue([{ id: 3, name: 'Gift Boxes' }]);
+    const productsRes = createMockResponse();
+    const categoriesRes = createMockResponse();
+    const next = vi.fn();
+
+    await productsController.list({ query: { page: '2' } }, productsRes, next);
+    await categoriesController.list({}, categoriesRes, next);
+
+    expect(listProducts).toHaveBeenCalledWith({ page: '2' });
+    expect(productsRes.body).toEqual({
+      success: true,
+      data: { result: [{ id: 1, name: 'Dark Bar' }] },
+    });
+    expect(categoriesRes.body).toEqual({
+      success: true,
+      data: [{ id: 3, name: 'Gift Boxes' }],
+    });
+  });
+
   it('returns category products when the category exists', async () => {
     getProductsByCategorySlug.mockResolvedValue({
       category: { id: 1, name: 'Dark', slug: 'dark' },
@@ -128,5 +149,28 @@ describe('catalog controllers', () => {
     expect(mergeCart).toHaveBeenCalledWith({ userId: 7, sessionId: 'guest-2' });
     expect(res.body).toEqual({ success: true, data: { id: 10, items: [] } });
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it('gets and removes cart items for a session cart', async () => {
+    getCart.mockResolvedValue({ id: 15, items: [{ id: 9, quantity: 1 }] });
+    removeCartItem.mockResolvedValue({ id: 15, items: [] });
+    const getRes = createMockResponse();
+    const removeRes = createMockResponse();
+    const next = vi.fn();
+
+    await cartController.getCart({ user: null, query: { sessionId: 'guest-3' } }, getRes, next);
+    await cartController.removeItem(
+      { params: { id: '9' }, body: { sessionId: 'guest-3' }, query: {}, user: null },
+      removeRes,
+      next
+    );
+
+    expect(getCart).toHaveBeenCalledWith({ userId: null, sessionId: 'guest-3' });
+    expect(removeCartItem).toHaveBeenCalledWith({
+      itemId: 9,
+      userId: null,
+      sessionId: 'guest-3',
+    });
+    expect(removeRes.body).toEqual({ success: true, data: { id: 15, items: [] } });
   });
 });

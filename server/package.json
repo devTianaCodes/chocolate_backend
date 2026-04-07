@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:integration:db": "RUN_DB_INTEGRATION_TESTS=true vitest run src/__tests__/integration/db.integration.test.js"
+    "test:integration:db": "RUN_DB_INTEGRATION_TESTS=true vitest run src/__tests__/integration/db.integration.test.js",
+    "test:coverage:overall": "node ./scripts/check-overall-coverage.mjs",
+    "test:coverage:changed": "node ./scripts/check-new-coverage.mjs"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
