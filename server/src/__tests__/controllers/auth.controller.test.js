@@ -3,6 +3,7 @@ import { createMockResponse } from '../setup/mockHttp.js';
 
 const registerUser = vi.fn();
 const loginUser = vi.fn();
+const loginDemoUser = vi.fn();
 const refreshAccessToken = vi.fn();
 const logoutUser = vi.fn();
 const getRefreshCookieName = vi.fn(() => 'refresh_token');
@@ -10,6 +11,7 @@ const getRefreshCookieName = vi.fn(() => 'refresh_token');
 vi.mock('../../services/auth.service.js', () => ({
   registerUser,
   loginUser,
+  loginDemoUser,
   refreshAccessToken,
   logoutUser,
   getRefreshCookieName,
@@ -65,6 +67,27 @@ describe('auth.controller', () => {
       expect.objectContaining({ httpOnly: true, path: '/' })
     );
     expect(res.body.success).toBe(true);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('sets the refresh cookie on successful demo login', async () => {
+    loginDemoUser.mockResolvedValue({
+      user: { id: 9, email: 'demo.customer@chocolatecrafthouse.local', role: 'customer' },
+      accessToken: 'demo-access-token',
+      refreshToken: 'demo-refresh-token',
+    });
+    const req = {};
+    const res = createMockResponse();
+    const next = vi.fn();
+
+    await authController.demoLogin(req, res, next);
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'refresh_token',
+      'demo-refresh-token',
+      expect.objectContaining({ httpOnly: true, path: '/' })
+    );
+    expect(res.body.data.accessToken).toBe('demo-access-token');
     expect(next).not.toHaveBeenCalled();
   });
 });

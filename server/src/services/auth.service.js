@@ -4,6 +4,21 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/
 import { hashToken } from '../utils/refreshToken.js';
 
 const REFRESH_COOKIE = 'refresh_token';
+const DEMO_USER = {
+  firstName: 'Demo',
+  lastName: 'Customer',
+  email: process.env.DEMO_USER_EMAIL || 'demo.customer@chocolatecrafthouse.local',
+  role: 'customer',
+  phone: '+1 555 0100',
+  address: {
+    line1: '24 Cocoa Lane',
+    line2: '',
+    city: 'Brussels',
+    state: 'Brussels',
+    postalCode: '1000',
+    country: 'Belgium',
+  },
+};
 
 function buildUser(row) {
   return {
@@ -117,6 +132,81 @@ export async function loginUser({ email, password }) {
   await insertRefreshToken(pool, user.id, refreshToken);
 
   return { user, accessToken, refreshToken };
+}
+
+export async function loginDemoUser() {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? LIMIT 1',
+      [DEMO_USER.email]
+    );
+
+    let userRow = rows[0];
+
+    if (!userRow) {
+      const passwordHash = await bcrypt.hash(`demo-${Date.now()}`, 10);
+      const [result] = await connection.query(
+        'INSERT INTO users (first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+        [DEMO_USER.firstName, DEMO_USER.lastName, DEMO_USER.email, passwordHash, DEMO_USER.role]
+      );
+
+      userRow = {
+        id: result.insertId,
+        email: DEMO_USER.email,
+        first_name: DEMO_USER.firstName,
+        last_name: DEMO_USER.lastName,
+        role: DEMO_USER.role,
+      };
+    } else {
+      await connection.query(
+        'UPDATE users SET first_name = ?, last_name = ?, role = ? WHERE id = ?',
+        [DEMO_USER.firstName, DEMO_USER.lastName, DEMO_USER.role, userRow.id]
+      );
+      userRow = {
+        ...userRow,
+        first_name: DEMO_USER.firstName,
+        last_name: DEMO_USER.lastName,
+        role: DEMO_USER.role,
+      };
+    }
+
+    await connection.query('DELETE FROM addresses WHERE user_id = ?', [userRow.id]);
+    await connection.query('DELETE FROM carts WHERE user_id = ?', [userRow.id]);
+    await connection.query('DELETE FROM refresh_tokens WHERE user_id = ?', [userRow.id]);
+    await connection.query(
+      `INSERT INTO addresses (user_id, label, recipient_name, line1, line2, city, state, postal_code, country, phone)
+       VALUES (?, 'Demo address', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userRow.id,
+        `${DEMO_USER.firstName} ${DEMO_USER.lastName}`,
+        DEMO_USER.address.line1,
+        DEMO_USER.address.line2 || null,
+        DEMO_USER.address.city,
+        DEMO_USER.address.state,
+        DEMO_USER.address.postalCode,
+        DEMO_USER.address.country,
+        DEMO_USER.phone,
+      ]
+    );
+
+    const user = buildUser(userRow);
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken({ id: user.id });
+
+    await insertRefreshToken(connection, user.id, refreshToken);
+    await connection.commit();
+
+    return { user, accessToken, refreshToken };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function refreshAccessToken({ refreshToken }) {
