@@ -7,13 +7,28 @@ function envNumber(value, fallback) {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function envFlag(value) {
+  return ["1", "true", "yes", "required"].includes(String(value || "").toLowerCase());
+}
+
+function sslConfig() {
+  if (!envFlag(process.env.DB_SSL)) {
+    return undefined;
+  }
+
+  return {
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== "false"
+  };
+}
+
 function dbConfig(includeDatabase = true) {
   return {
     host: process.env.DB_HOST || "127.0.0.1",
     port: envNumber(process.env.DB_PORT, 3306),
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
-    ...(includeDatabase ? { database: process.env.DB_NAME } : {})
+    ...(includeDatabase ? { database: process.env.DB_NAME } : {}),
+    ...(sslConfig() ? { ssl: sslConfig() } : {})
   };
 }
 

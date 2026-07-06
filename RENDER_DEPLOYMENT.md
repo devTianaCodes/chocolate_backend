@@ -23,6 +23,8 @@ DB_PORT=3306
 DB_USER=<mysql-user>
 DB_PASSWORD=<mysql-password>
 DB_NAME=<mysql-database>
+DB_SSL=true
+DB_SSL_REJECT_UNAUTHORIZED=true
 JWT_ACCESS_SECRET=<generated-secret>
 JWT_REFRESH_SECRET=<generated-secret>
 JWT_ACCESS_EXPIRES=15m
@@ -45,6 +47,8 @@ mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db
 ```
 
 The `db/seeds/sample_products.sql` file contains the larger product set for the live Chocolate Craft House catalogue.
+
+If the cloud database requires TLS, keep `DB_SSL=true` in Render. For local MySQL, leave `DB_SSL=false`. When importing with the `mysql` CLI into a TLS-only database, add `--ssl-mode=REQUIRED` to each command.
 
 ## Connect Frontend
 
