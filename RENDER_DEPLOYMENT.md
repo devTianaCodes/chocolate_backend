@@ -19,7 +19,7 @@ Set these in Render:
 ```text
 CLIENT_URL=https://chocolate-frontend-one.vercel.app
 DB_HOST=<mysql-host>
-DB_PORT=3306
+DB_PORT=4000
 DB_USER=<mysql-user>
 DB_PASSWORD=<mysql-password>
 DB_NAME=<mysql-database>
@@ -38,17 +38,17 @@ STRIPE_WEBHOOK_SECRET=<stripe-webhook-secret>
 After the Render service can connect to MySQL, import the SQL seed files once. This is the path that keeps the full product catalogue available in the live demo.
 
 ```bash
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/schema.sql
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/categories.sql
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/sample_products.sql
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/product_images_seed.sql
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/shipping_methods.sql
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/admin_user.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/schema.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/categories.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/sample_products.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/product_images_seed.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/shipping_methods.sql
+mysql --ssl-mode=REQUIRED -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < db/seeds/admin_user.sql
 ```
 
 The `db/seeds/sample_products.sql` file contains the larger product set for the live Chocolate Craft House catalogue.
 
-If the cloud database requires TLS, keep `DB_SSL=true` in Render. For local MySQL, leave `DB_SSL=false`. When importing with the `mysql` CLI into a TLS-only database, add `--ssl-mode=REQUIRED` to each command.
+For TiDB Cloud, use port `4000` and keep `DB_SSL=true` in Render. For local MySQL, leave `DB_SSL=false` and port `3306`.
 
 ## Connect Frontend
 
