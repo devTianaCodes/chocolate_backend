@@ -45,6 +45,18 @@ describe('catalog services', () => {
     });
   });
 
+  it('uses deterministic popular ordering when requested', async () => {
+    queuePoolQueries([[]], [[{ total: 0 }]]);
+
+    await productsService.listProducts({ page: 1, limit: 10, sort: 'popular' });
+
+    expect(mockPool.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('ORDER BY (p.id % 3) DESC, p.id DESC'),
+      [10, 0]
+    );
+  });
+
   it('returns null when a product slug is missing', async () => {
     queuePoolQueries([[]]);
 

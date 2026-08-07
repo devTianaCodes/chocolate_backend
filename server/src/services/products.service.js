@@ -1,10 +1,14 @@
 import { pool } from '../config/db.js';
 import { catalogImagePath, normalizeCatalogProduct } from '../utils/catalogImages.js';
 
-export async function listProducts({ page = 1, limit = 12 } = {}) {
+export async function listProducts({ page = 1, limit = 12, sort } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safeLimit = Math.min(100, Math.max(1, Number(limit) || 12));
   const offset = (safePage - 1) * safeLimit;
+
+  const orderBy = sort === 'popular'
+    ? '(p.id % 3) DESC, p.id DESC'
+    : 'p.created_at DESC';
 
   const [rows] = await pool.query(
     `SELECT p.id, p.slug, p.name, p.description, p.price, p.discount_price, p.image,
@@ -20,7 +24,7 @@ export async function listProducts({ page = 1, limit = 12 } = {}) {
      FROM products p
      JOIN categories c ON c.id = p.category_id
      WHERE p.is_active = 1
-     ORDER BY p.created_at DESC
+     ORDER BY ${orderBy}
      LIMIT ? OFFSET ?`,
     [safeLimit, offset]
   );
