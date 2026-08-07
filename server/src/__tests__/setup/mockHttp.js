@@ -10,6 +10,7 @@ export function createMockResponse() {
       res.statusCode = code;
       return res;
     }),
+    set: vi.fn(() => res),
     json: vi.fn((payload) => {
       res.body = payload;
       return res;

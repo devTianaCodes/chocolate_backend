@@ -66,6 +66,10 @@ describe('catalog controllers', () => {
       success: true,
       data: { result: [{ id: 1, name: 'Dark Bar' }] },
     });
+    expect(productsRes.set).toHaveBeenCalledWith(
+      'Cache-Control',
+      'public, max-age=60, s-maxage=300, stale-while-revalidate=300'
+    );
     expect(categoriesRes.body).toEqual({
       success: true,
       data: [{ id: 3, name: 'Gift Boxes' }],

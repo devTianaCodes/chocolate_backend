@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockPool, queuePoolQueries, resetMockDb } from '../setup/mockDb.js';
+import { clearCatalogCache } from '../../utils/catalogCache.js';
 
 vi.mock('../../config/db.js', async () => {
   const helpers = await import('../setup/mockDb.js');
@@ -12,6 +13,7 @@ const categoriesService = await import('../../services/categories.service.js');
 describe('catalog services', () => {
   beforeEach(() => {
     resetMockDb();
+    clearCatalogCache();
   });
 
   it('lists products with normalized pagination info', async () => {
@@ -43,6 +45,16 @@ describe('catalog services', () => {
         hover_image: null,
       }],
     });
+  });
+
+  it('reuses a warm product page without querying the database again', async () => {
+    queuePoolQueries([[{ id: 3, name: 'Cached Bar' }]], [[{ total: 1 }]]);
+
+    const first = await productsService.listProducts({ page: 1, limit: 10 });
+    const second = await productsService.listProducts({ page: 1, limit: 10 });
+
+    expect(second).toBe(first);
+    expect(mockPool.query).toHaveBeenCalledTimes(2);
   });
 
   it('uses deterministic popular ordering when requested', async () => {

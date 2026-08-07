@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { clearCatalogCache } from '../utils/catalogCache.js';
 
 export async function listAdminProducts() {
   const [rows] = await pool.query(
@@ -47,6 +48,7 @@ export async function createAdminProduct(payload) {
     ]
   );
 
+  clearCatalogCache();
   return { id: result.insertId };
 }
 
@@ -83,6 +85,7 @@ export async function updateAdminProduct({ id, payload }) {
 
   values.push(id);
   await pool.query(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, values);
+  clearCatalogCache();
   return { id };
 }
 

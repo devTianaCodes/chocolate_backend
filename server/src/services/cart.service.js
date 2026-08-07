@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { catalogImagePath } from '../utils/catalogImages.js';
 
 async function findCart({ userId, sessionId }) {
   if (userId) {
@@ -29,13 +30,21 @@ async function createCart({ userId, sessionId }) {
 async function getCartItems(cartId) {
   const [rows] = await pool.query(
     `SELECT ci.id, ci.quantity, p.id AS product_id, p.slug, p.name, p.price, p.discount_price,
-            p.image, p.origin, p.cocoa_percentage, p.weight_grams
+            p.image, p.origin, p.cocoa_percentage, p.weight_grams, c.slug AS category_slug
      FROM cart_items ci
      JOIN products p ON p.id = ci.product_id
+     JOIN categories c ON c.id = p.category_id
      WHERE ci.cart_id = ?`,
     [cartId]
   );
-  return rows;
+  return rows.map((item) => ({
+    ...item,
+    image: catalogImagePath({
+      source: item.image,
+      categorySlug: item.category_slug,
+      productName: item.name,
+    }),
+  }));
 }
 
 async function getCartByItemOwnership({ itemId, userId, sessionId }) {

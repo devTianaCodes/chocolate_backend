@@ -19,7 +19,14 @@ describe('cart.service', () => {
       [[{ id: 10 }]],
       [[]],
       [{}],
-      [[{ id: 99, quantity: 2, product_id: 4, name: 'Bar' }]]
+      [[{
+        id: 99,
+        quantity: 2,
+        product_id: 4,
+        name: 'Cacao-Rich Vegan & Dairy-Free - Mexico 76%',
+        category_slug: 'vegan-dairy-free',
+        image: 'https://res.cloudinary.com/demo/image/upload/w_400/chocolate_007.jpg',
+      }]]
     );
 
     const result = await cartService.addCartItem({
@@ -34,6 +41,9 @@ describe('cart.service', () => {
     );
     expect(result.id).toBe(10);
     expect(result.items).toHaveLength(1);
+    expect(result.items[0].image).toBe(
+      '/product-images/cacao-rich-vegan-and-dairy-free-main.jpg'
+    );
   });
 
   it('rejects updates for cart items owned by another cart', async () => {
