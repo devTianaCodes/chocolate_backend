@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { normalizeCatalogProduct } from '../utils/catalogImages.js';
 
 export async function listCategories() {
   const [rows] = await pool.query(
@@ -32,5 +33,8 @@ export async function getProductsByCategorySlug(slug) {
     [category.id]
   );
 
-  return { category, products };
+  return {
+    category,
+    products: products.map((product) => normalizeCatalogProduct(product, category.slug)),
+  };
 }

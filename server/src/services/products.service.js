@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { catalogImagePath, normalizeCatalogProduct } from '../utils/catalogImages.js';
 
 export async function listProducts({ page = 1, limit = 12 } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
@@ -34,7 +35,7 @@ export async function listProducts({ page = 1, limit = 12 } = {}) {
       pages: Math.ceil(total / safeLimit),
       currentPage: safePage,
     },
-    result: rows,
+    result: rows.map((product) => normalizeCatalogProduct(product)),
   };
 }
 
@@ -50,7 +51,7 @@ export async function getProductBySlug(slug) {
     [slug]
   );
 
-  const product = rows[0] || null;
+  const product = rows[0] ? normalizeCatalogProduct(rows[0]) : null;
   if (!product) return null;
 
   const [imageRows] = await pool.query(
@@ -65,10 +66,16 @@ export async function getProductBySlug(slug) {
   const seen = new Set();
 
   const pushImage = (url, altText, isPrimary) => {
-    if (!url || seen.has(url)) return;
-    seen.add(url);
+    const normalizedUrl = catalogImagePath({
+      source: url,
+      categorySlug: product.category_slug,
+      productName: product.name,
+      variant: isPrimary ? 'main' : 'detail',
+    });
+    if (!normalizedUrl || seen.has(normalizedUrl)) return;
+    seen.add(normalizedUrl);
     images.push({
-      url,
+      url: normalizedUrl,
       alt_text: altText || product.name,
       is_primary: Boolean(isPrimary),
     });

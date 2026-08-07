@@ -16,7 +16,13 @@ describe('catalog services', () => {
 
   it('lists products with normalized pagination info', async () => {
     queuePoolQueries(
-      [[{ id: 7, name: 'Dark Bar' }]],
+      [[{
+        id: 7,
+        name: 'Midnight Sugar-Free - Mexico 69%',
+        category_slug: 'sugar-free',
+        image: 'https://res.cloudinary.com/demo/image/upload/w_400/chocolate_098.jpg',
+        hover_image: null,
+      }]],
       [[{ total: 21 }]]
     );
 
@@ -29,7 +35,13 @@ describe('catalog services', () => {
     );
     expect(result).toEqual({
       info: { total: 21, pages: 3, currentPage: 2 },
-      result: [{ id: 7, name: 'Dark Bar' }],
+      result: [{
+        id: 7,
+        name: 'Midnight Sugar-Free - Mexico 69%',
+        category_slug: 'sugar-free',
+        image: '/product-images/midnight-sugar-free-main.jpg',
+        hover_image: null,
+      }],
     });
   });
 
@@ -86,14 +98,24 @@ describe('catalog services', () => {
   it('returns category products when the category exists', async () => {
     queuePoolQueries(
       [[{ id: 4, name: 'Gift Boxes', slug: 'gift-boxes' }]],
-      [[{ id: 11, name: 'Holiday Box' }]]
+      [[{
+        id: 11,
+        name: 'Holiday Box',
+        image: '/product-images/golden-gift-boxes-main.png',
+        hover_image: '/product-images/golden-gift-boxes-detail.png',
+      }]]
     );
 
     const result = await categoriesService.getProductsByCategorySlug('gift-boxes');
 
     expect(result).toEqual({
       category: { id: 4, name: 'Gift Boxes', slug: 'gift-boxes' },
-      products: [{ id: 11, name: 'Holiday Box' }],
+      products: [{
+        id: 11,
+        name: 'Holiday Box',
+        image: '/product-images/golden-gift-boxes-main.jpg',
+        hover_image: '/product-images/golden-gift-boxes-detail.jpg',
+      }],
     });
   });
 });
